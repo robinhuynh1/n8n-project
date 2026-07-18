@@ -1,0 +1,225 @@
+{
+  "name": "Demo: My first AI Agent in n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Start by saying 'hi'\n![Button](https://i.imgur.com/PrIBJI6.png)",
+        "height": 149,
+        "width": 150
+      },
+      "id": "5592c045-6718-4c4e-9961-ce67a251b6df",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional cybersecurity analyst assistant. Every morning you produce a clean, concise daily security briefing for a cybersecurity professional.\n\nFormat the briefing like this:\n🛡️ DAILY SECURITY BRIEFING - {{ $('Schedule Trigger').item.json['Readable date'] }}\n\nFor each article write:\n- Headline\n- 2-3 sentence plain English summary of why it matters\n- Threat level: Low / Medium / High / Critical\n\nEnd with a 2 sentence \"Today's Takeaway\" summarizing the biggest theme of the day.\n\nKeep the tone professional but readable. No jargon unless necessary.\n\n\nHere are the top cybersecurity headlines. Please write my daily briefings: {{ $json.title }} : {{ $json.desc }}",
+        "options": {}
+      },
+      "id": "41174c8a-6ac8-42bd-900e-ca15196600c5",
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        352,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        352,
+        432
+      ],
+      "id": "57fa5276-a7b1-413d-b12b-d8a7117dd0e8",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gvjoPbm8Fs6djESp",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "practice"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        560
+      ],
+      "id": "e0c742f9-bb12-4910-8d2c-ac22b3bdb3d0",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        80
+      ],
+      "id": "df9fcb1b-d8ce-4493-a52c-4503863c120d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/TheHackersNews",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        464,
+        80
+      ],
+      "id": "c0795a02-b7c4-4131-b5c3-20bdc76ec448",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = items[0].json.data;\n\n// Extract items between <item> tags\nconst itemMatches = [...xml.matchAll(/<item>([\\s\\S]*?)<\\/item>/g)].slice(0, 5);\n\nconst articles = itemMatches.map(match => {\n  const block = match[1];\n  \n  const titleMatch = block.match(/<title>([\\s\\S]*?)<\\/title>/);\n  const linkMatch = block.match(/<link>([\\s\\S]*?)<\\/link>/);\n  const descMatch = block.match(/<description>([\\s\\S]*?)<\\/description>/);\n  \n  const title = titleMatch ? titleMatch[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').trim() : 'No title';\n  const link = linkMatch ? linkMatch[1].trim() : '';\n  const desc = descMatch ? descMatch[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, '').trim().substring(0, 300) : '';\n\n  return { json: { title, link, desc } };\n});\n\nreturn articles;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        80
+      ],
+      "id": "0b31ab62-ffba-47c7-a315-7f96370b5bb5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        640,
+        288
+      ],
+      "id": "1dc8de38-4170-476c-9b5d-ab2d04e0e12a",
+      "name": "Discord",
+      "webhookId": "f07cbae3-2715-4ca9-a6a3-e3d37dff808b",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "liQclzZWaoGHnbNt",
+          "name": "Discord Webhook account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "01df48e8-03d5-4ec5-88ee-590255280305",
+  "meta": {
+    "templateId": "self-building-ai-agent",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9d602af62e249b700aff4259ccc9fcfcdb752527419c3c0e02353d35e55895ac"
+  },
+  "id": "CUMLeg4O2nper6Yf",
+  "tags": []
+}
